@@ -1,0 +1,16 @@
+# Docker uses this file (not a plain .dockerignore) because it sits next to the Dockerfile
+# and the build context is the repo root. Paths are relative to the repo root.
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.vscode
+apps/web
+apps/api/src/generated
+apps/api/test
+apps/api/**/*.spec.ts
+**/*.md
