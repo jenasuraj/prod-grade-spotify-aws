@@ -13,7 +13,7 @@ export default function HealthPage() {
   }, [dispatch]);
 
   return (
-    <section className="flex min-h-screen items-center justify-center bg-zinc-950 p-4 text-zinc-100">
+    <section className="flex min-h-screen items-center justify-center p-4">
       <title>{APP_NAME}</title>
       <div className="w-full max-w-sm space-y-4">
         <h1 className="text-2xl font-bold">{APP_NAME}</h1>

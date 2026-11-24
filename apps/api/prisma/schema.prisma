@@ -1,8 +1,8 @@
 generator client {
-  provider             = "prisma-client"
-  output               = "../src/generated/prisma"
-  moduleFormat         = "esm"
-  importFileExtension  = "js"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
 }
 
 datasource db {
@@ -10,9 +10,42 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // no spaces; also the public profile url: /<name>
   email     String   @unique
-  name      String?
+  password  String
+  profile   Profile?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// 1:1 with users. Created on the first edit, so a user may not have one yet
+model Profile {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName      String?
+  headline         String? // one line under the name
+  bio              String?
+  avatarKey        String? // S3 object key: avatars/<userId>/<uuid>.<ext>
+  location         String?
+  company          String?
+  jobTitle         String?
+  pronouns         String?
+  availableForWork Boolean  @default(false)
+  interests        String[]
+  skills           String[]
+  website          String?
+  twitter          String?
+  github           String?
+  linkedin         String?
+  medium           String?
+  youtube          String?
+  instagram        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("profiles")
 }

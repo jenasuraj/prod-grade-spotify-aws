@@ -1,8 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
+import authReducer from './auth/authSlice';
 import healthReducer from './health/healthSlice';
+import profileReducer from './profile/profileSlice';
 
-export const makeStore = () => configureStore({ reducer: { health: healthReducer } });
+export const makeStore = () =>
+  configureStore({
+    reducer: { auth: authReducer, health: healthReducer, profile: profileReducer },
+  });
 
 export const store = makeStore();
 

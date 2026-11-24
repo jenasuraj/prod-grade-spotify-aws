@@ -1,10 +1,10 @@
 import type { ComponentProps } from 'react';
+import { buttonStyles, type ButtonVariant } from './buttonStyles';
 
-export default function Button({ className = '', ...props }: ComponentProps<'button'>) {
-  return (
-    <button
-      className={`rounded-lg bg-green-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-green-400 disabled:opacity-40 ${className}`}
-      {...props}
-    />
-  );
+interface ButtonProps extends ComponentProps<'button'> {
+  variant?: ButtonVariant;
+}
+
+export default function Button({ variant, className, ...props }: ButtonProps) {
+  return <button className={buttonStyles(variant, className)} {...props} />;
 }

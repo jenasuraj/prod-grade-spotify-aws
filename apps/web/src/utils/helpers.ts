@@ -3,6 +3,14 @@ import { ZodError } from 'zod';
 
 export const APP_NAME = 'Spotify';
 
+export const getInitials = (name: string) =>
+  name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
 export const getErrorMessage = (error: unknown) => {
   if (error instanceof ZodError) return 'The server sent an unexpected response.';
   if (isAxiosError<{ message?: string | string[] }>(error)) {
