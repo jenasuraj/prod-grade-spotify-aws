@@ -25,7 +25,7 @@ export default function ProfilePage() {
   if (loading) return <PageLoader />;
 
   return (
-    <section className="mx-auto max-w-3xl space-y-4 px-4 pt-20 pb-10">
+    <section className="mx-auto max-w-3xl space-y-4 px-4 pt-6 pb-10">
       <title>{`${name} — ${APP_NAME}`}</title>
 
       {data && (

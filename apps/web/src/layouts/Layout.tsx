@@ -1,13 +1,13 @@
 import { Outlet } from 'react-router';
-import AuthButtons from '../features/auth/AuthButtons';
 import { useSessionCheck } from '../features/auth/useSessionCheck';
+import Navbar from '../features/navbar/Navbar';
 
 export default function Layout() {
   useSessionCheck();
   return (
     <>
-      <AuthButtons />
-      <main className="min-h-screen overflow-x-clip">
+      <Navbar />
+      <main className="min-h-screen overflow-x-clip pt-16">
         <Outlet />
       </main>
     </>

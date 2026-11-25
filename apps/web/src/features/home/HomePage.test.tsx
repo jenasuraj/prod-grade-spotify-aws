@@ -1,10 +1,10 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { api } from '../../lib/api';
 import { makeStore } from '../../store';
 import { validateSession } from '../../store/auth/authThunks';
 import type { ValidateResponse } from '../../types/auth';
-import HomePage, { SPLASH_IMAGE, SPLASH_MS } from './HomePage';
+import HomePage from './HomePage';
 
 const signedIn: ValidateResponse = {
   authenticated: true,
@@ -12,10 +12,10 @@ const signedIn: ValidateResponse = {
   expiresAt: new Date(Date.now() + 60_000).toISOString(),
 };
 
-const renderWith = (session: ValidateResponse) => {
+const renderWith = (session?: ValidateResponse) => {
   const store = makeStore();
   store.dispatch(validateSession.pending('id'));
-  store.dispatch(validateSession.fulfilled(session, 'id'));
+  if (session) store.dispatch(validateSession.fulfilled(session, 'id'));
   return render(
     <Provider store={store}>
       <HomePage />
@@ -25,25 +25,23 @@ const renderWith = (session: ValidateResponse) => {
 
 describe('HomePage', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
     jest.spyOn(api, 'get').mockResolvedValue({ data: { status: 'ok', db: 'up', redis: 'up' } });
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
+  afterEach(() => jest.restoreAllMocks());
+
+  it('shows a loader while the session is being checked', () => {
+    renderWith();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
   });
 
-  it('shows the splash image for 2s to a logged-in user', async () => {
+  it('goes straight to the page for a logged-in user', async () => {
     renderWith(signedIn);
-    expect(screen.getByAltText('Loading')).toHaveAttribute('src', SPLASH_IMAGE);
-    act(() => jest.advanceTimersByTime(SPLASH_MS));
-    expect(screen.queryByAltText('Loading')).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /check/i })).toBeInTheDocument();
   });
 
-  it('skips the splash for guests', () => {
+  it('goes straight to the page for guests', async () => {
     renderWith({ authenticated: false });
-    expect(screen.queryByAltText('Loading')).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /check/i })).toBeInTheDocument();
   });
 });
