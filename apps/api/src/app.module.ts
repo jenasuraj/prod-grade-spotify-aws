@@ -9,6 +9,7 @@ import { S3Module } from './infra/s3/s3.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ProfileModule } from './modules/profile/profile.module.js';
+import { SongsModule } from './modules/songs/songs.module.js';
 
 @Module({
   imports: [
@@ -18,10 +19,11 @@ import { ProfileModule } from './modules/profile/profile.module.js';
     RedisModule,
     MailModule,
     S3Module,
-    // features: /api/auth, /api/health, /api/profile
+    // features: /api/auth, /api/health, /api/profile, /api/songs
     AuthModule,
     HealthModule,
     ProfileModule,
+    SongsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

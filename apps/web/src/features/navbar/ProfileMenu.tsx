@@ -1,4 +1,4 @@
-import { LogIn, LogOut, User } from 'lucide-react';
+import { CirclePlus, LogIn, LogOut, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useAppDispatch, useAppSelector } from '../../store';
@@ -56,6 +56,9 @@ export default function ProfileMenu() {
             <>
               <Link role="menuitem" to={`/${user.name}`} onClick={close} className={ITEM}>
                 <User className="size-4" /> Profile
+              </Link>
+              <Link role="menuitem" to="/songs/new" onClick={close} className={ITEM}>
+                <CirclePlus className="size-4" /> Upload song
               </Link>
               <div className="my-1 border-t border-white/10" />
               <button role="menuitem" type="button" onClick={handleLogout} className={ITEM}>

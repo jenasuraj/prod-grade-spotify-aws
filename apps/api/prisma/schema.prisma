@@ -15,6 +15,7 @@ model User {
   email     String   @unique
   password  String
   profile   Profile?
+  songs     Song[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -33,4 +34,18 @@ model Profile {
   updatedAt DateTime @updatedAt
 
   @@map("profiles")
+}
+
+// The row is saved when the upload url is handed out, before the file reaches S3
+model Song {
+  id        String   @id @default(uuid())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  musicKey  String   @unique // songs/<userId>/<id>
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("songs")
 }

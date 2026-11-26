@@ -22,6 +22,22 @@ export class S3Service {
         accessKeyId: config.getOrThrow<string>('AWS_ACCESS_KEY_ID'),
         secretAccessKey: config.getOrThrow<string>('AWS_SECRET_ACCESS_KEY'),
       },
+      // Otherwise presigned PUTs carry a checksum of an empty body and every browser upload fails
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+    });
+  }
+
+  /** A 15 min PUT url for the browser. Type and exact size are signed, so S3 rejects anything else */
+  signUpload(key: string, contentType: string, size: number) {
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+      ContentLength: size,
+    });
+    return getSignedUrl(this.s3, command, {
+      expiresIn: 900,
+      signableHeaders: new Set(['content-type']),
     });
   }
 
