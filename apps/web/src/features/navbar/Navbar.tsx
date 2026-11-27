@@ -1,6 +1,7 @@
 import { Archive, Bell, CircleArrowDown, House, Search, Users } from 'lucide-react';
 import { FaSpotify } from 'react-icons/fa';
 import { Link } from 'react-router';
+import { GUTTER } from '../../utils/helpers';
 import ProfileMenu from './ProfileMenu';
 
 const ICON_BUTTON =
@@ -9,7 +10,9 @@ const ICON_BUTTON =
 // Persists across routes via Layout; only the profile menu is interactive for now
 export default function Navbar() {
   return (
-    <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between gap-4 bg-black px-4 sm:px-6">
+    <header
+      className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between gap-4 bg-black ${GUTTER}`}
+    >
       <Link to="/" aria-label="Home" className="shrink-0">
         <FaSpotify className="size-9 text-white" />
       </Link>

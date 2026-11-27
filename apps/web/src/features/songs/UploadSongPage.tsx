@@ -1,161 +1,352 @@
-import { CloudUpload, Music, RotateCcw, X } from 'lucide-react';
-import { useEffect, useState, type ChangeEvent, type DragEvent, type FormEvent } from 'react';
+import { ArrowRight, Clapperboard, LoaderCircle, Plus, Search } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import ArtworkDrop from '../../components/songs/ArtworkDrop';
+import AudioDropzone from '../../components/songs/AudioDropzone';
+import GenrePicker from '../../components/songs/GenrePicker';
+import MediaSlot from '../../components/songs/MediaSlot';
+import ReleaseChecklist, { type ChecklistItem } from '../../components/songs/ReleaseChecklist';
 import SongList from '../../components/songs/SongList';
-import UploadProgress from '../../components/songs/UploadProgress';
 import FormMessage from '../../components/ui/FormMessage';
 import { useAppDispatch, useAppSelector } from '../../store';
-import { uploadReset } from '../../store/songs/songsSlice';
-import { fetchSongs, uploadSong } from '../../store/songs/songsThunks';
-import { APP_NAME, formatBytes } from '../../utils/helpers';
+import { songReset } from '../../store/songs/songsSlice';
+import { deleteSong, fetchSongs, uploadSongFile } from '../../store/songs/songsThunks';
+import type { FileUpload, SongFileKind } from '../../types/song';
+import { APP_NAME, artworkFor, formatBytes, GUTTER } from '../../utils/helpers';
+import { useActiveSection } from './useActiveSection';
+import { useObjectUrl } from './useObjectUrl';
 
-const MUSIC_TYPES =
-  'audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav,audio/flac,audio/x-flac,audio/ogg';
+const MB = 1024 * 1024;
+const SECTIONS = ['studio', 'library'];
 
-const MAX_SIZE = 50 * 1024 * 1024;
+// Same list the api accepts
+const GENRES = [
+  'Pop',
+  'Hip-hop',
+  'R&B',
+  'Rock',
+  'Electronic',
+  'Jazz',
+  'Classical',
+  'Lo-fi',
+  'Indie',
+  'Folk',
+];
 
 // Same rules as the api, so a wrong file is caught before anything is sent
-const fileError = (file: File) => {
-  if (!MUSIC_TYPES.split(',').includes(file.type)) return 'Pick an mp3, m4a, wav, flac or ogg file';
-  if (file.size > MAX_SIZE) return 'Music must be at most 50 MB';
+const FILES: Record<SongFileKind, { accept: string; maxSize: number }> = {
+  music: {
+    accept:
+      'audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav,audio/flac,audio/x-flac,audio/ogg',
+    maxSize: 50 * MB,
+  },
+  image: { accept: 'image/jpeg,image/png,image/webp', maxSize: 5 * MB },
+  video: { accept: 'video/mp4,video/webm', maxSize: 200 * MB },
+};
+
+const fileError = (kind: SongFileKind, file: File) => {
+  const { accept, maxSize } = FILES[kind];
+  if (!accept.split(',').includes(file.type)) return "That file type isn't supported here";
+  if (file.size > maxSize) return `Pick a file up to ${maxSize / MB} MB`;
   return '';
+};
+
+const scrollTo = (id: string) => {
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById(id)?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+};
+
+const fileState = ({ status }: FileUpload): ChecklistItem['state'] => {
+  if (status === 'done') return 'done';
+  if (status === 'failed') return 'failed';
+  return status === 'uploading' ? 'active' : 'todo';
+};
+
+const fileDetail = ({ status, percent }: FileUpload, file: File | undefined, idle: string) => {
+  if (status === 'uploading') return `Uploading · ${percent}%`;
+  if (status === 'failed') return 'Failed, try again';
+  if (file) return `${file.name} · ${formatBytes(file.size)}`;
+  return idle;
 };
 
 export default function UploadSongPage() {
   const dispatch = useAppDispatch();
-  const { status, percent, error, list, listLoading, listError } = useAppSelector((s) => s.songs);
+  const { songId, uploads, error, list, listLoading, listError, deleting } = useAppSelector(
+    (s) => s.songs,
+  );
   const [title, setTitle] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [description, setDescription] = useState('');
+  const [genres, setGenres] = useState<string[]>([]);
+  const [files, setFiles] = useState<Partial<Record<SongFileKind, File>>>({});
   const [fileMessage, setFileMessage] = useState('');
-  const [dragging, setDragging] = useState(false);
-  const uploading = status === 'uploading';
+  const [query, setQuery] = useState('');
+  const coverPreview = useObjectUrl(files.image);
+  const active = useActiveSection(SECTIONS);
+  const musicDone = uploads.music.status === 'done';
+  const busy = Object.values(uploads).some(({ status }) => status === 'uploading');
+  const seed = songId ?? (title || 'new');
+  const needle = query.trim().toLowerCase();
+  const shown = list.filter(
+    (song) =>
+      !needle ||
+      song.title.toLowerCase().includes(needle) ||
+      song.description?.toLowerCase().includes(needle) ||
+      song.genres.some((genre) => genre.toLowerCase().includes(needle)),
+  );
+  const checklist: ChecklistItem[] = [
+    {
+      label: 'Title',
+      detail: title.trim() || 'Name your track',
+      state: title.trim() ? 'done' : 'active',
+    },
+    {
+      label: 'Genres',
+      detail: genres.length ? genres.join(', ') : 'Optional',
+      state: genres.length ? 'done' : 'todo',
+    },
+    {
+      label: 'Audio',
+      detail: fileDetail(uploads.music, files.music, 'Required'),
+      state: fileState(uploads.music),
+    },
+    {
+      label: 'Artwork',
+      detail: fileDetail(uploads.image, files.image, 'Optional'),
+      state: fileState(uploads.image),
+    },
+    {
+      label: 'Video',
+      detail: fileDetail(uploads.video, files.video, 'Optional'),
+      state: fileState(uploads.video),
+    },
+  ];
+
   useEffect(() => {
     void dispatch(fetchSongs());
-    return () => void dispatch(uploadReset());
+    return () => void dispatch(songReset());
   }, [dispatch]);
-  const pick = (picked?: File) => {
-    if (!picked) return;
-    const message = fileError(picked);
+
+  const pick = (kind: SongFileKind) => (file: File) => {
+    const message = fileError(kind, file);
     setFileMessage(message);
-    if (!message) setFile(picked);
+    if (message) return;
+    setFiles({ ...files, [kind]: file });
+    // Once the song exists, artwork or video uploads as soon as it's picked
+    if (kind !== 'music') void dispatch(uploadSongFile({ kind, file }));
   };
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    pick(e.target.files?.[0]);
-    e.target.value = '';
-  };
-  const handleDrop = (e: DragEvent<HTMLLabelElement>) => {
+
+  const handleCreate = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setDragging(false);
-    if (!uploading) pick(e.dataTransfer.files[0]);
+    if (files.music)
+      void dispatch(
+        uploadSongFile({ kind: 'music', file: files.music, title, description, genres }),
+      );
   };
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (file) void dispatch(uploadSong({ title, file }));
-  };
-  const handleReset = () => {
-    dispatch(uploadReset());
+
+  const handleFinish = () => {
+    dispatch(songReset());
     setTitle('');
-    setFile(null);
+    setDescription('');
+    setGenres([]);
+    setFiles({});
+    setFileMessage('');
   };
 
   return (
-    <section className="relative isolate flex min-h-[calc(100vh-4rem)] flex-col items-center gap-8 overflow-hidden bg-slate-950 px-4 py-10">
-      <title>{`Upload a song — ${APP_NAME}`}</title>
-      <div
-        aria-hidden="true"
-        className="absolute -top-40 left-1/2 -z-10 size-[32rem] -translate-x-1/2 rounded-full bg-green-500/10 blur-3xl"
-      />
+    <div className="min-h-[calc(100vh-4rem)] bg-ink-950 text-slate-100">
+      <title>{`Studio — ${APP_NAME}`}</title>
 
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-2xl space-y-6 rounded-3xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl shadow-black/40 backdrop-blur sm:p-8"
-      >
-        <header className="flex items-center gap-4">
-          <span className="grid size-12 place-items-center rounded-2xl bg-green-500 text-slate-950">
-            <Music className="size-6" />
-          </span>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Upload a song</h1>
-            <p className="text-sm text-slate-400">
-              It goes straight from your browser to the cloud.
-            </p>
-          </div>
-        </header>
-
-        <input
-          aria-label="Title"
-          placeholder="Song title"
-          required
-          maxLength={100}
-          disabled={uploading || status === 'done'}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-white transition placeholder:text-slate-600 focus:border-green-500/60 focus:ring-2 focus:ring-green-500/20 focus:outline-none"
-        />
-        <label
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={handleDrop}
-          className={`flex items-center gap-4 rounded-2xl border-2 border-dashed p-4 transition ${dragging ? 'border-green-400 bg-green-500/10' : 'border-slate-700 hover:border-green-500/60'} ${uploading || status === 'done' ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
-        >
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-800 text-green-400">
-            <CloudUpload className="size-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-white">
-              {file ? file.name : 'Drop your music here or click to browse'}
-            </span>
-            <span className="block text-xs text-slate-400">
-              {file ? formatBytes(file.size) : 'MP3, M4A, WAV, FLAC or OGG · up to 50 MB'}
-            </span>
-          </span>
-          {file && status === 'idle' && (
+      <div className="sticky top-16 z-30 border-b border-white/[0.06] bg-ink-950/85 backdrop-blur-md">
+        <nav className={`flex h-12 items-center gap-7 ${GUTTER}`}>
+          {SECTIONS.map((id) => (
             <button
+              key={id}
               type="button"
-              aria-label="Remove file"
-              onClick={(e) => {
-                e.preventDefault();
-                setFile(null);
-              }}
-              className="pointer-events-auto grid size-8 place-items-center rounded-full text-slate-400 hover:bg-slate-800 hover:text-white"
+              onClick={() => scrollTo(id)}
+              aria-current={active === id ? 'true' : undefined}
+              className={`relative h-full text-sm font-medium capitalize transition-colors ${active === id ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
             >
-              <X className="size-4" />
+              {id}
+              <span
+                className={`absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-lime-300 transition-opacity duration-200 ${active === id ? 'opacity-100' : 'opacity-0'}`}
+              />
             </button>
-          )}
-          <input type="file" accept={MUSIC_TYPES} onChange={handleChange} className="sr-only" />
-        </label>
-
-        {file && <UploadProgress status={status} percent={percent} size={file.size} />}
-        <FormMessage message={fileMessage || error} />
-        {status === 'done' ? (
-          <button
-            type="button"
-            onClick={handleReset}
-            className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-700 py-3 text-sm font-semibold text-slate-200 transition hover:border-green-500/60 hover:text-white"
-          >
-            <RotateCcw className="size-4" /> Upload another
-          </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={uploading || !file || !title.trim()}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-green-500 py-3 text-sm font-bold text-slate-950 transition hover:bg-green-400 disabled:pointer-events-none disabled:opacity-40"
-          >
-            <CloudUpload className="size-4" /> {uploading ? `Uploading ${percent}%` : 'Upload'}
-          </button>
-        )}
-      </form>
-
-      <div className="w-full max-w-2xl rounded-3xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl shadow-black/40 backdrop-blur sm:p-8">
-        <h2 className="flex items-center justify-between text-lg font-bold text-white">
-          Your songs
-          <span className="text-sm font-medium text-slate-500">{list.length}</span>
-        </h2>
-        <FormMessage message={listError} />
-        <SongList songs={list} loading={listLoading} />
+          ))}
+          <span className="ml-auto text-xs text-slate-500 tabular-nums">
+            {list.length} {list.length === 1 ? 'track' : 'tracks'} in your library
+          </span>
+        </nav>
       </div>
-    </section>
+
+      <section id="studio" className="relative isolate scroll-mt-28 overflow-hidden">
+        <div
+          aria-hidden="true"
+          className={`absolute -top-1/3 left-0 -z-10 h-[140%] w-2/3 bg-linear-to-br opacity-[0.18] blur-3xl transition-colors duration-700 ${artworkFor(seed)}`}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-linear-to-b from-transparent via-ink-950/40 to-ink-950"
+        />
+
+        <form
+          onSubmit={handleCreate}
+          className={`grid gap-10 py-10 md:grid-cols-[14rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)] lg:py-14 xl:grid-cols-[20rem_minmax(0,1fr)_19rem] xl:gap-12 2xl:grid-cols-[24rem_minmax(0,1fr)_22rem] ${GUTTER}`}
+        >
+          <div className="mx-auto w-full max-w-72 md:max-w-none">
+            <ArtworkDrop
+              seed={seed}
+              accept={FILES.image.accept}
+              upload={uploads.image}
+              previewUrl={coverPreview}
+              locked={!musicDone}
+              onSelect={pick('image')}
+            />
+          </div>
+
+          <div className="flex min-w-0 flex-col">
+            <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.22em] text-slate-400 uppercase">
+              <span
+                className={`size-1.5 rounded-full ${musicDone ? 'bg-lime-300' : 'bg-amber-300'}`}
+              />
+              Single · {musicDone ? 'Saved' : 'Draft'}
+            </p>
+            <input
+              aria-label="Title"
+              placeholder="Untitled track"
+              required
+              maxLength={100}
+              disabled={!!songId}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="mt-3 w-full border-0 bg-transparent p-0 font-display text-4xl font-semibold tracking-tight text-white placeholder:text-white/20 focus:outline-none disabled:text-white sm:text-5xl xl:text-6xl"
+            />
+            <textarea
+              aria-label="Description"
+              placeholder="Add a line about the track, the mood, who's on it…"
+              rows={2}
+              maxLength={1000}
+              disabled={!!songId}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="mt-3 w-full max-w-3xl resize-none border-0 bg-transparent p-0 leading-relaxed text-slate-300 placeholder:text-slate-600 focus:outline-none disabled:text-slate-400"
+            />
+            <div className="mt-5">
+              <p className="mb-3 text-[11px] font-semibold tracking-[0.22em] text-slate-500 uppercase">
+                Genres <span className="tracking-normal normal-case">· pick any</span>
+              </p>
+              <GenrePicker
+                options={GENRES}
+                selected={genres}
+                disabled={!!songId}
+                onChange={setGenres}
+              />
+            </div>
+
+            <div className="mt-8">
+              <AudioDropzone
+                accept={FILES.music.accept}
+                upload={uploads.music}
+                file={files.music}
+                onSelect={pick('music')}
+              />
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              {musicDone ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={handleFinish}
+                  className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-ink-950 transition hover:bg-lime-300 active:scale-[0.98] disabled:opacity-40"
+                >
+                  <Plus className="size-4" /> Start another track
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={busy || !files.music || !title.trim()}
+                  className="group flex items-center gap-2 rounded-full bg-lime-300 px-6 py-3 text-sm font-bold text-ink-950 transition hover:bg-lime-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-30 motion-reduce:transition-none"
+                >
+                  {busy ? (
+                    <>
+                      <LoaderCircle className="size-4 animate-spin" /> Uploading{' '}
+                      {uploads.music.percent}%
+                    </>
+                  ) : (
+                    <>
+                      Save track
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                    </>
+                  )}
+                </button>
+              )}
+              <p className="text-sm text-slate-500">
+                {musicDone
+                  ? 'Saved. Add artwork or a video, both upload as soon as you pick them.'
+                  : 'Audio goes straight from your browser to storage.'}
+              </p>
+            </div>
+            <div className="mt-4 max-w-xl">
+              <FormMessage message={fileMessage || error} />
+            </div>
+          </div>
+
+          <aside className="space-y-8 md:col-span-2 xl:col-span-1 xl:border-l xl:border-white/[0.06] xl:pl-10">
+            <div>
+              <p className="mb-5 text-[11px] font-semibold tracking-[0.22em] text-slate-500 uppercase">
+                Release checklist
+              </p>
+              <ReleaseChecklist items={checklist} />
+            </div>
+            <MediaSlot
+              label="Add a video"
+              hint={musicDone ? 'MP4 or WebM · up to 200 MB' : 'Unlocks once the track is up'}
+              accept={FILES.video.accept}
+              icon={Clapperboard}
+              upload={uploads.video}
+              file={files.video}
+              disabled={!musicDone}
+              onSelect={pick('video')}
+            />
+          </aside>
+        </form>
+      </section>
+
+      <section
+        id="library"
+        className={`scroll-mt-28 border-t border-white/[0.06] py-12 lg:py-16 ${GUTTER}`}
+      >
+        <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Library
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">Everything you've released, newest first.</p>
+          </div>
+          <label className="relative w-full sm:w-80">
+            <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-slate-500" />
+            <input
+              type="search"
+              aria-label="Search your tracks"
+              placeholder="Search title or genre"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full rounded-full border border-white/[0.07] bg-ink-900 py-2.5 pr-4 pl-11 text-sm text-slate-100 transition placeholder:text-slate-600 hover:border-white/15 focus:border-lime-300/50 focus:ring-4 focus:ring-lime-300/10 focus:outline-none"
+            />
+          </label>
+        </div>
+        <FormMessage message={listError} />
+        <SongList
+          songs={shown}
+          loading={listLoading}
+          deleting={deleting}
+          onDelete={(id) => void dispatch(deleteSong(id))}
+          emptyText={
+            needle
+              ? `Nothing matches "${query.trim()}".`
+              : 'No tracks yet. Your first upload will land here.'
+          }
+        />
+      </section>
+    </div>
   );
 }

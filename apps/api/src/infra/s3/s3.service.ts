@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -54,6 +55,19 @@ export class S3Service {
 
   async delete(key: string) {
     await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  /** Removes several objects in one request. Keys that don't exist are not an error */
+  async deleteMany(keys: string[]) {
+    if (!keys.length) return;
+    const { Errors } = await this.s3.send(
+      new DeleteObjectsCommand({
+        Bucket: this.bucket,
+        Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+      }),
+    );
+    // S3 reports per-key failures (e.g. AccessDenied) in the body, not as a thrown error
+    if (Errors?.length) throw new Error(Errors.map((e) => `${e.Key}: ${e.Code}`).join(', '));
   }
 
   // The bucket stays private; this url works for 1 hour

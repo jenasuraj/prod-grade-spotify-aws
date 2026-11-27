@@ -1,5 +1,16 @@
 @import 'tailwindcss';
 
+@theme {
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+  /* Layered dark surfaces for the creator pages: base → panel → raised */
+  --color-ink-950: #07090d;
+  --color-ink-900: #0c1016;
+  --color-ink-850: #10151d;
+  --color-ink-800: #161c26;
+  --color-ink-700: #1f2733;
+}
+
 body {
   @apply bg-zinc-950 text-zinc-100 antialiased;
 }

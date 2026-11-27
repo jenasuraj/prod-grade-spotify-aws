@@ -38,13 +38,18 @@ model Profile {
 
 // The row is saved when the upload url is handed out, before the file reaches S3
 model Song {
-  id        String   @id @default(uuid())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  musicKey  String   @unique // songs/<userId>/<id>
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  genres      String[] @default([]) // from the fixed list in upload-song-file.dto.ts
+  // songs/<userId>/<id>/<music|image|video>. Each key is saved before its file reaches S3
+  musicKey    String   @unique
+  imageKey    String?
+  videoKey    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId])
   @@map("songs")

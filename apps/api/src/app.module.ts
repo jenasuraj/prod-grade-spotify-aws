@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ProfileModule } from './modules/profile/profile.module.js';
 import { SongsModule } from './modules/songs/songs.module.js';
+import { DummyModule } from './modules/dummy/dummy.module.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SongsModule } from './modules/songs/songs.module.js';
     HealthModule,
     ProfileModule,
     SongsModule,
+    DummyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

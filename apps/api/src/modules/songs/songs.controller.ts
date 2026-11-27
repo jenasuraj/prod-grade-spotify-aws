@@ -1,25 +1,41 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthGuard, type AuthUser } from '../auth/auth.guard.js';
-import { CreateSongDto } from './dto/create-song.dto.js';
+import { UploadSongFileDto } from './dto/upload-song-file.dto.js';
 import { SongsService } from './songs.service.js';
 
 type AuthRequest = Request & { user: AuthUser };
 
 @Controller('songs')
+@UseGuards(AuthGuard)
 export class SongsController {
   constructor(private readonly songs: SongsService) {}
 
-  // Returns a 15 min upload url; the browser then PUTs the music straight to S3
+  // One endpoint for every file: music starts a song, an image or video (with songId) joins it.
+  // Returns a 15 min url; the browser then PUTs the file straight to S3
   @Post()
-  @UseGuards(AuthGuard)
-  create(@Req() req: AuthRequest, @Body() dto: CreateSongDto) {
-    return this.songs.create(req.user.id, dto);
+  upload(@Req() req: AuthRequest, @Body() dto: UploadSongFileDto) {
+    return this.songs.upload(req.user.id, dto);
   }
 
   @Get()
-  @UseGuards(AuthGuard)
   findMine(@Req() req: AuthRequest) {
     return this.songs.findMine(req.user.id);
+  }
+
+  // Removes the song and its music, image and video from storage
+  @Delete(':id')
+  remove(@Req() req: AuthRequest, @Param('id', ParseUUIDPipe) id: string) {
+    return this.songs.remove(req.user.id, id);
   }
 }

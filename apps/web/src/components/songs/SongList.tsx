@@ -1,42 +1,151 @@
-import { LoaderCircle, Music } from 'lucide-react';
+import { AudioLines, Clapperboard, LoaderCircle, Trash2, X } from 'lucide-react';
+import { useState } from 'react';
 import type { Song } from '../../types/song';
+import { artworkFor } from '../../utils/helpers';
+import AudioPlayer from './AudioPlayer';
 
 interface SongListProps {
   songs: Song[];
   loading: boolean;
+  emptyText: string;
+  deleting: string[]; // ids with a delete in flight
+  onDelete: (id: string) => void;
 }
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
-export default function SongList({ songs, loading }: SongListProps) {
+// An open video, else the artwork, else a generated gradient
+const Cover = ({ id, imageUrl, videoUrl }: Pick<Song, 'id' | 'imageUrl' | 'videoUrl'>) => {
+  if (videoUrl)
+    return <video controls autoPlay src={videoUrl} className="size-full bg-black object-contain" />;
+  if (imageUrl)
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        className="size-full object-cover transition duration-500 group-hover/card:scale-[1.03] motion-reduce:transition-none"
+      />
+    );
+  return (
+    <div className={`grid size-full place-items-center bg-linear-to-br ${artworkFor(id)}`}>
+      <AudioLines className="size-12 text-white/70" />
+    </div>
+  );
+};
+
+export default function SongList({ songs, loading, emptyText, deleting, onDelete }: SongListProps) {
+  const [openVideo, setOpenVideo] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
   if (loading && !songs.length)
     return (
-      <div role="status" aria-label="Loading songs" className="grid place-items-center py-10">
+      <div role="status" aria-label="Loading songs" className="grid place-items-center py-20">
         <LoaderCircle className="size-5 animate-spin text-slate-500" />
       </div>
     );
   if (!songs.length)
     return (
-      <p className="py-8 text-center text-sm text-slate-500">
-        No songs yet. Upload your first one above.
-      </p>
+      <div className="grid place-items-center gap-3 rounded-3xl border border-dashed border-white/10 py-20 text-center">
+        <AudioLines className="size-8 text-slate-600" />
+        <p className="max-w-xs text-sm text-slate-500">{emptyText}</p>
+      </div>
     );
   return (
-    <ol className="divide-y divide-slate-800">
-      {songs.map(({ id, title, createdAt, musicUrl }, i) => (
-        <li key={id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="w-5 text-right text-sm text-slate-500 tabular-nums">{i + 1}</span>
-            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-linear-to-br from-green-500 to-emerald-800 text-slate-950">
-              <Music className="size-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-white">{title}</p>
-              <p className="text-xs text-slate-500">{formatDate(createdAt)}</p>
-            </div>
+    <ol className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      {songs.map(({ id, title, description, genres, createdAt, musicUrl, imageUrl, videoUrl }) => (
+        <li key={id} className="group/card min-w-0">
+          <div className="relative aspect-square overflow-hidden rounded-2xl bg-ink-900 ring-1 ring-white/[0.06] transition duration-300 group-hover/card:ring-white/15 motion-reduce:transition-none">
+            <Cover id={id} imageUrl={imageUrl} videoUrl={openVideo === id ? videoUrl : null} />
+            <button
+              type="button"
+              aria-label={`Delete ${title}`}
+              onClick={() => setConfirming(id)}
+              className="absolute top-3 left-3 grid size-8 place-items-center rounded-full bg-ink-950/75 text-slate-300 backdrop-blur transition hover:bg-rose-500 hover:text-white focus-visible:opacity-100 sm:opacity-0 sm:group-hover/card:opacity-100"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+            {videoUrl && (
+              <button
+                type="button"
+                aria-pressed={openVideo === id}
+                onClick={() => setOpenVideo(openVideo === id ? null : id)}
+                className="absolute top-3 right-3 flex h-8 items-center gap-1.5 rounded-full bg-ink-950/75 px-3 text-xs font-semibold text-white backdrop-blur transition hover:bg-ink-950"
+              >
+                {openVideo === id ? (
+                  <>
+                    <X className="size-3.5" /> Close
+                  </>
+                ) : (
+                  <>
+                    <Clapperboard className="size-3.5" /> Video
+                  </>
+                )}
+              </button>
+            )}
+            {(confirming === id || deleting.includes(id)) && (
+              <div
+                role="alertdialog"
+                aria-label={`Delete ${title}?`}
+                className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-ink-950/90 p-5 text-center backdrop-blur-sm"
+              >
+                {deleting.includes(id) ? (
+                  <p className="flex items-center gap-2 text-sm text-slate-300">
+                    <LoaderCircle className="size-4 animate-spin" /> Deleting…
+                  </p>
+                ) : (
+                  <>
+                    <div>
+                      <p className="font-display font-semibold text-white">Delete “{title}”?</p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Its audio, artwork and video are removed for good.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(null)}
+                        className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-white/30"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirming(null);
+                          onDelete(id);
+                        }}
+                        className="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-rose-400"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-          <audio controls preload="none" src={musicUrl} className="h-9 w-full sm:w-64" />
+          <div className="mt-4 px-0.5">
+            <p className="truncate font-display text-lg font-semibold text-white">{title}</p>
+            <p className="truncate text-sm text-slate-500">
+              {description ? `${description} · ` : ''}
+              {formatDate(createdAt)}
+            </p>
+            {genres.length > 0 && (
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {genres.map((genre) => (
+                  <li
+                    key={genre}
+                    className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-medium text-slate-300"
+                  >
+                    {genre}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="mt-3 px-0.5">
+            <AudioPlayer src={musicUrl} title={title} compact />
+          </div>
         </li>
       ))}
     </ol>
