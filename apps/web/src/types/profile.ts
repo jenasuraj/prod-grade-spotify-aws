@@ -10,3 +10,16 @@ export interface ProfileResponse {
 }
 
 export type UpdateProfilePayload = Partial<ProfileFields>;
+
+export interface Person {
+  name: string;
+  displayName: string | null;
+}
+
+// GET /api/profile/:name/follows
+export interface FollowsResponse {
+  followingCount: number;
+  followerCount: number;
+  following: Person[];
+  followers: Person[];
+}

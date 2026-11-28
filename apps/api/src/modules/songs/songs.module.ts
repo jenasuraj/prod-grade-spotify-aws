@@ -7,5 +7,6 @@ import { SongsService } from './songs.service.js';
   imports: [AuthModule],
   controllers: [SongsController],
   providers: [SongsService],
+  exports: [SongsService],
 })
 export class SongsModule {}

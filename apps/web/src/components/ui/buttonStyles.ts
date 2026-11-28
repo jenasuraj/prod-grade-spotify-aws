@@ -1,8 +1,9 @@
-export type ButtonVariant = 'primary' | 'secondary';
+export type ButtonVariant = 'primary' | 'secondary' | 'accent';
 
 const variants: Record<ButtonVariant, string> = {
   primary: 'bg-white text-zinc-950 hover:bg-zinc-200',
   secondary: 'border border-white/10 bg-white/5 text-zinc-100 hover:bg-white/10',
+  accent: 'h-12 bg-lime-300 font-bold text-ink-950 hover:bg-lime-200 active:scale-[0.98]',
 };
 
 export const buttonStyles = (variant: ButtonVariant = 'primary', className = '') =>

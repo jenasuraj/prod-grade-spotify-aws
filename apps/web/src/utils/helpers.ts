@@ -6,6 +6,11 @@ export const APP_NAME = 'Spotify';
 // Side padding shared by the navbar and full-width pages, so their edges line up
 export const GUTTER = 'px-4 sm:px-6 lg:px-10 2xl:px-16';
 
+export const scrollToSection = (id: string) => {
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById(id)?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+};
+
 export const formatTime = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;

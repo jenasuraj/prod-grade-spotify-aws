@@ -35,28 +35,34 @@ export default function OtpForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 text-center">
-      <span className="mx-auto grid size-12 place-items-center rounded-full bg-indigo-500/15">
-        <MailCheck className="size-6 text-indigo-400" />
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <span className="grid size-12 place-items-center rounded-2xl bg-lime-300/10">
+        <MailCheck className="size-6 text-lime-300" />
       </span>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          We sent a 6-digit code to{' '}
-          <span className="font-medium text-zinc-200">{pending?.email}</span>
+        <h1 className="font-display text-4xl font-semibold tracking-tight text-white">
+          Check your email.
+        </h1>
+        <p className="mt-2 text-slate-400">
+          We sent a 6-digit code to <span className="font-medium text-white">{pending?.email}</span>
         </p>
       </div>
       <OtpInput value={code} onChange={setCode} />
       <FormMessage message={error} />
       <FormMessage message={notice} tone="success" />
-      <Button type="submit" disabled={loading || code.length !== 6} className="w-full">
+      <Button
+        type="submit"
+        variant="accent"
+        disabled={loading || code.length !== 6}
+        className="w-full"
+      >
         {loading ? 'Verifying…' : 'Verify email'}
       </Button>
       <div className="flex items-center justify-between text-sm">
         <button
           type="button"
           onClick={() => dispatch(cancelRegistration())}
-          className="text-zinc-400 transition hover:text-zinc-100"
+          className="text-slate-400 transition hover:text-white"
         >
           Use a different email
         </button>
@@ -64,7 +70,7 @@ export default function OtpForm() {
           type="button"
           onClick={handleResend}
           disabled={cooldown > 0}
-          className="text-indigo-400 transition hover:text-indigo-300 disabled:text-zinc-600"
+          className="font-semibold text-lime-300 transition hover:text-lime-200 disabled:font-normal disabled:text-slate-600"
         >
           {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
         </button>

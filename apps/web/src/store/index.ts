@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import authReducer from './auth/authSlice';
 import healthReducer from './health/healthSlice';
 import profileReducer from './profile/profileSlice';
+import searchReducer from './search/searchSlice';
 import songsReducer from './songs/songsSlice';
 
 export const makeStore = () =>
@@ -11,6 +12,7 @@ export const makeStore = () =>
       auth: authReducer,
       health: healthReducer,
       profile: profileReducer,
+      search: searchReducer,
       songs: songsReducer,
     },
   });

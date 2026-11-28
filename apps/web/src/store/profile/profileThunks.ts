@@ -1,6 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { api } from '../../lib/api';
-import type { ProfileResponse, UpdateProfilePayload } from '../../types/profile';
+import type { ProfileSongs } from '../../types/song';
+import type { FollowsResponse, ProfileResponse, UpdateProfilePayload } from '../../types/profile';
 import { getErrorMessage } from '../../utils/helpers';
 import type { RootState } from '../index';
 
@@ -18,6 +19,29 @@ export const fetchProfile = thunk('profile/fetch', async (name: string, { reject
     return rejectWithValue(getErrorMessage(err));
   }
 });
+
+// Who they follow and who follows them
+export const fetchFollows = thunk('profile/follows', async (name: string, { rejectWithValue }) => {
+  try {
+    const { data } = await api.get<FollowsResponse>(`/profile/${name}/follows`);
+    return data;
+  } catch (err) {
+    return rejectWithValue(getErrorMessage(err));
+  }
+});
+
+// The songs they made and the songs they liked
+export const fetchProfileSongs = thunk(
+  'profile/songs',
+  async (name: string, { rejectWithValue }) => {
+    try {
+      const { data } = await api.get<ProfileSongs>(`/profile/${name}/songs`);
+      return data;
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
 
 // Your own profile; the backend knows who you are from the cookie
 export const updateProfile = thunk(

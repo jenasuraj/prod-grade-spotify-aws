@@ -15,10 +15,18 @@ describe('SongsService', () => {
   const songs = {
     create: jest.fn<(args: { data: Record<string, unknown> }) => Promise<unknown>>(),
     findFirst: jest.fn<(args: unknown) => Promise<{ id: string } | null>>(),
+    findUnique: jest.fn<(args: unknown) => Promise<{ userId: number } | null>>(),
     update: jest.fn<(args: { data: Record<string, unknown> }) => Promise<unknown>>(),
     findMany: jest.fn<(args: unknown) => Promise<unknown[]>>(),
     delete: jest.fn<(args: unknown) => Promise<unknown>>(),
   };
+  const likes = {
+    findMany: jest.fn<(args: unknown) => Promise<{ songId: string }[]>>(),
+    deleteMany: jest.fn<(args: unknown) => Promise<{ count: number }>>(),
+    createMany: jest.fn<(args: unknown) => Promise<{ count: number }>>(),
+  };
+  const follows = { findMany: jest.fn<(args: unknown) => Promise<{ followingId: number }[]>>() };
+  const users = { findUnique: jest.fn<(args: unknown) => Promise<{ id: number } | null>>() };
   const s3 = {
     signUpload: jest.fn<S3Service['signUpload']>(),
     signedUrl: jest.fn<S3Service['signedUrl']>(),
@@ -35,7 +43,10 @@ describe('SongsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SongsService,
-        { provide: PrismaService, useValue: { song: songs } },
+        {
+          provide: PrismaService,
+          useValue: { song: songs, like: likes, follow: follows, user: users },
+        },
         { provide: RedisService, useValue: redis },
         { provide: S3Service, useValue: s3 },
       ],
@@ -171,5 +182,85 @@ describe('SongsService', () => {
     await expect(service.remove(8, ID)).rejects.toThrow(NotFoundException);
     expect(songs.delete).not.toHaveBeenCalled();
     expect(s3.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('search marks your own songs, the ones you liked and the artists you follow', async () => {
+    const createdAt = new Date('2026-11-28');
+    const base = { description: null, genres: [], createdAt, imageKey: null, videoKey: null };
+    songs.findMany.mockResolvedValue([
+      { ...base, id: 'a', title: 'Night drive', musicKey: 'ma', user: { id: 7, name: 'me' } },
+      { ...base, id: 'b', title: 'Night owl', musicKey: 'mb', user: { id: 9, name: 'riya' } },
+    ]);
+    likes.findMany.mockResolvedValue([{ songId: 'b' }]);
+    follows.findMany.mockResolvedValue([{ followingId: 9 }]);
+    const result = await service.search(7, 'Night');
+    expect(songs.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { title: { contains: 'Night', mode: 'insensitive' } } }),
+    );
+    expect(
+      result.map(({ artist, isMine, liked, following }) => ({ artist, isMine, liked, following })),
+    ).toEqual([
+      { artist: 'me', isMine: true, liked: false, following: false },
+      { artist: 'riya', isMine: false, liked: true, following: true },
+    ]);
+    expect(redis.set).toHaveBeenCalledWith('songs:search:night', expect.any(String), 'EX', 60);
+  });
+
+  it('search serves the shared song list from the cache', async () => {
+    redis.get.mockResolvedValue(
+      JSON.stringify([{ id: 'b', title: 'Night owl', artist: { id: 9, name: 'riya' } }]),
+    );
+    likes.findMany.mockResolvedValue([]);
+    follows.findMany.mockResolvedValue([]);
+    const [song] = await service.search(7, 'night');
+    expect(songs.findMany).not.toHaveBeenCalled();
+    expect(song).toMatchObject({ artist: 'riya', isMine: false, liked: false });
+  });
+
+  it('like toggles: the first call likes, the second unlikes', async () => {
+    songs.findUnique.mockResolvedValue({ userId: 9 });
+    likes.deleteMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 });
+    expect(await service.toggleLike(7, ID)).toEqual({ liked: true });
+    expect(likes.createMany).toHaveBeenCalledWith({
+      data: { userId: 7, songId: ID },
+      skipDuplicates: true,
+    });
+    expect(await service.toggleLike(7, ID)).toEqual({ liked: false });
+    expect(likes.createMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("can't like your own song or one that doesn't exist", async () => {
+    songs.findUnique.mockResolvedValueOnce({ userId: 7 }).mockResolvedValueOnce(null);
+    await expect(service.toggleLike(7, ID)).rejects.toThrow(BadRequestException);
+    await expect(service.toggleLike(7, ID)).rejects.toThrow(NotFoundException);
+    expect(likes.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("a profile's songs: their own plus the ones they liked, credited to each artist", async () => {
+    const base = {
+      description: null,
+      genres: [],
+      createdAt: new Date(),
+      imageKey: null,
+      videoKey: null,
+    };
+    users.findUnique.mockResolvedValue({ id: 9 });
+    songs.findMany.mockResolvedValue([{ ...base, id: 'own', title: 'Mine', musicKey: 'm1' }]);
+    (likes.findMany as jest.Mock<(args: unknown) => Promise<unknown>>).mockResolvedValue([
+      { song: { ...base, id: 'fav', title: 'Theirs', musicKey: 'm2', user: { name: 'amit' } } },
+    ]);
+    const { songs: own, liked } = await service.findByUser('riya');
+    expect(own.map(({ id }) => id)).toEqual(['own']);
+    expect(liked).toEqual([
+      expect.objectContaining({ id: 'fav', artist: 'amit', musicUrl: 'https://s3/m2?read' }),
+    ]);
+    expect(redis.set).toHaveBeenCalledWith('songs:liked:9', expect.any(String), 'EX', 600);
+  });
+
+  it('liking or unliking clears your cached liked songs', async () => {
+    songs.findUnique.mockResolvedValue({ userId: 9 });
+    likes.deleteMany.mockResolvedValue({ count: 0 });
+    await service.toggleLike(7, ID);
+    expect(redis.del).toHaveBeenCalledWith('songs:liked:7');
   });
 });

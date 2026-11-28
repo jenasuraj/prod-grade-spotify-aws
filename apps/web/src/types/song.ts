@@ -32,3 +32,22 @@ export interface Song {
   imageUrl: string | null;
   videoUrl: string | null;
 }
+
+// Someone else's song in a profile's liked list
+export interface LikedSong extends Song {
+  artist: string;
+}
+
+// GET /api/profile/:name/songs
+export interface ProfileSongs {
+  songs: Song[];
+  liked: LikedSong[];
+}
+
+// GET /api/songs/search?q=: everyone's songs, with your like and follow state
+export interface SearchSong extends Song {
+  artist: string;
+  isMine: boolean;
+  liked: boolean;
+  following: boolean;
+}

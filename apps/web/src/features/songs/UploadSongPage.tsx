@@ -7,11 +7,12 @@ import MediaSlot from '../../components/songs/MediaSlot';
 import ReleaseChecklist, { type ChecklistItem } from '../../components/songs/ReleaseChecklist';
 import SongList from '../../components/songs/SongList';
 import FormMessage from '../../components/ui/FormMessage';
+import SectionTabs from '../../components/ui/SectionTabs';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { songReset } from '../../store/songs/songsSlice';
 import { deleteSong, fetchSongs, uploadSongFile } from '../../store/songs/songsThunks';
 import type { FileUpload, SongFileKind } from '../../types/song';
-import { APP_NAME, artworkFor, formatBytes, GUTTER } from '../../utils/helpers';
+import { APP_NAME, artworkFor, formatBytes, GUTTER, scrollToSection } from '../../utils/helpers';
 import { useActiveSection } from './useActiveSection';
 import { useObjectUrl } from './useObjectUrl';
 
@@ -48,11 +49,6 @@ const fileError = (kind: SongFileKind, file: File) => {
   if (!accept.split(',').includes(file.type)) return "That file type isn't supported here";
   if (file.size > maxSize) return `Pick a file up to ${maxSize / MB} MB`;
   return '';
-};
-
-const scrollTo = (id: string) => {
-  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  document.getElementById(id)?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
 };
 
 const fileState = ({ status }: FileUpload): ChecklistItem['state'] => {
@@ -155,27 +151,9 @@ export default function UploadSongPage() {
     <div className="min-h-[calc(100vh-4rem)] bg-ink-950 text-slate-100">
       <title>{`Studio — ${APP_NAME}`}</title>
 
-      <div className="sticky top-16 z-30 border-b border-white/[0.06] bg-ink-950/85 backdrop-blur-md">
-        <nav className={`flex h-12 items-center gap-7 ${GUTTER}`}>
-          {SECTIONS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => scrollTo(id)}
-              aria-current={active === id ? 'true' : undefined}
-              className={`relative h-full text-sm font-medium capitalize transition-colors ${active === id ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              {id}
-              <span
-                className={`absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-lime-300 transition-opacity duration-200 ${active === id ? 'opacity-100' : 'opacity-0'}`}
-              />
-            </button>
-          ))}
-          <span className="ml-auto text-xs text-slate-500 tabular-nums">
-            {list.length} {list.length === 1 ? 'track' : 'tracks'} in your library
-          </span>
-        </nav>
-      </div>
+      <SectionTabs ids={SECTIONS} active={active} onSelect={scrollToSection}>
+        {list.length} {list.length === 1 ? 'track' : 'tracks'} in your library
+      </SectionTabs>
 
       <section id="studio" className="relative isolate scroll-mt-28 overflow-hidden">
         <div
