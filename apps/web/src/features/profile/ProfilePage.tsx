@@ -1,56 +1,153 @@
+import { LoaderCircle, Pencil, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
+import FollowStats from '../../components/profile/FollowStats';
 import ProfileCard from '../../components/profile/ProfileCard';
 import ProfileForm from '../../components/profile/ProfileForm';
-import Button from '../../components/ui/Button';
+import SongList from '../../components/songs/SongList';
 import FormMessage from '../../components/ui/FormMessage';
-import PageLoader from '../../components/ui/PageLoader';
+import SectionHeading from '../../components/ui/SectionHeading';
+import SectionTabs from '../../components/ui/SectionTabs';
 import { useAppDispatch, useAppSelector } from '../../store';
-import { fetchProfile, updateProfile, uploadAvatar } from '../../store/profile/profileThunks';
-import { APP_NAME } from '../../utils/helpers';
+import {
+  fetchFollows,
+  fetchProfile,
+  fetchProfileSongs,
+  updateProfile,
+  uploadAvatar,
+} from '../../store/profile/profileThunks';
+import { APP_NAME, artworkFor, GUTTER, scrollToSection } from '../../utils/helpers';
+import { useActiveSection } from '../songs/useActiveSection';
+const SECTIONS = ['tracks', 'liked', 'people'];
 
-// /:name — anyone can view it; the owner also gets the edit form and picture upload
+
+
+// /:name — anyone can view it; the owner can also edit it and change the picture
 export default function ProfilePage() {
   const { name = '' } = useParams();
   const dispatch = useAppDispatch();
   const me = useAppSelector((s) => s.auth.user);
-  const { data, loading, saving, error, notice } = useAppSelector((s) => s.profile);
+  const { data, follows, songs, loading, saving, error, notice } = useAppSelector((s) => s.profile);
   const [editing, setEditing] = useState(false);
+  const active = useActiveSection(SECTIONS);
   const isOwner = me?.name === name;
+  const tracks = songs?.songs ?? [];
+  const liked = songs?.liked ?? [];
+  const songsLoading = !songs && !error;
+  const stats = [
+    { label: tracks.length === 1 ? 'track' : 'tracks', value: tracks.length },
+    { label: 'liked', value: liked.length },
+    { label: 'followers', value: follows?.followerCount ?? 0 },
+    { label: 'following', value: follows?.followingCount ?? 0 },
+  ];
 
   useEffect(() => {
     void dispatch(fetchProfile(name));
+    void dispatch(fetchFollows(name));
+    void dispatch(fetchProfileSongs(name));
   }, [dispatch, name]);
 
-  if (loading) return <PageLoader />;
-
   return (
-    <section className="mx-auto max-w-3xl space-y-4 px-4 pt-6 pb-10">
+    <div className="min-h-[calc(100vh-4rem)] bg-ink-950 text-slate-100">
       <title>{`${name} — ${APP_NAME}`}</title>
 
-      {data && (
-        <ProfileCard
-          data={data}
-          onUpload={isOwner ? (file) => void dispatch(uploadAvatar(file)) : undefined}
-          uploading={saving}
+      <header className="relative isolate overflow-hidden">
+        <div
+          aria-hidden="true"
+          className={`absolute -top-1/2 left-0 -z-10 h-[180%] w-full bg-linear-to-br opacity-25 blur-3xl ${artworkFor(name)}`}
         />
-      )}
-      <FormMessage message={error} />
-      <FormMessage message={notice} tone="success" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-linear-to-b from-transparent via-ink-950/40 to-ink-950"
+        />
+        <div className={`space-y-6 py-12 lg:py-16 ${GUTTER}`}>
+          {loading && (
+            <div role="status" aria-label="Loading" className="grid h-56 place-items-center">
+              <LoaderCircle className="size-6 animate-spin text-slate-500" />
+            </div>
+          )}
+          {data && (
+            <ProfileCard
+              data={data}
+              stats={stats}
+              onUpload={isOwner ? (file) => void dispatch(uploadAvatar(file)) : undefined}
+              uploading={saving}
+            >
+              {isOwner && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(!editing)}
+                    className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink-950 transition hover:bg-lime-300 active:scale-[0.98]"
+                  >
+                    <Pencil className="size-4" /> {editing ? 'Close editor' : 'Edit profile'}
+                  </button>
+                  <Link
+                    to="/songs/new"
+                    className="flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-bold text-white transition hover:border-lime-300/60 hover:text-lime-300"
+                  >
+                    <Plus className="size-4" /> New track
+                  </Link>
+                </>
+              )}
+            </ProfileCard>
+          )}
+          {data && isOwner && editing && (
+            <div className="max-w-md">
+              <ProfileForm
+                profile={data.profile}
+                saving={saving}
+                onSave={(payload) => void dispatch(updateProfile(payload))}
+              />
+            </div>
+          )}
+          <div className="max-w-xl space-y-2">
+            <FormMessage message={error} />
+            <FormMessage message={notice} tone="success" />
+          </div>
+        </div>
+      </header>
 
-      {data &&
-        isOwner &&
-        (editing ? (
-          <ProfileForm
-            profile={data.profile}
-            saving={saving}
-            onSave={(payload) => void dispatch(updateProfile(payload))}
-          />
-        ) : (
-          <Button variant="secondary" onClick={() => setEditing(true)}>
-            Edit profile
-          </Button>
-        ))}
-    </section>
+      <SectionTabs ids={SECTIONS} active={active} onSelect={scrollToSection} />
+
+      <section id="tracks" className={`scroll-mt-28 py-12 lg:py-16 ${GUTTER}`}>
+        <SectionHeading title="Tracks" subtitle="Everything released, newest first." />
+        <SongList
+          songs={tracks}
+          loading={songsLoading}
+          emptyText={
+            isOwner ? 'No tracks yet. Your first upload will land here.' : 'No tracks yet.'
+          }
+        />
+      </section>
+
+      <section
+        id="liked"
+        className={`scroll-mt-28 border-t border-white/[0.06] py-12 lg:py-16 ${GUTTER}`}
+      >
+        <SectionHeading title="Liked" subtitle="Songs from other artists, latest like first." />
+        <SongList
+          songs={liked}
+          loading={songsLoading}
+          emptyText="No liked songs yet."
+          renderCredit={(song) => (
+            <Link
+              to={`/${song.artist}`}
+              className="mt-0.5 block truncate text-sm text-slate-400 hover:text-white hover:underline"
+            >
+              {song.artist}
+            </Link>
+          )}
+        />
+      </section>
+
+      <section
+        id="people"
+        className={`scroll-mt-28 border-t border-white/[0.06] py-12 lg:py-16 ${GUTTER}`}
+      >
+        <SectionHeading title="People" subtitle="Who they follow and who follows them." />
+        {follows && <FollowStats follows={follows} />}
+      </section>
+    </div>
   );
 }

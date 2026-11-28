@@ -11,14 +11,14 @@ import RegisterForm from './RegisterForm';
 
 const copy = {
   login: {
-    title: 'Welcome back',
-    subtitle: 'Log in to keep listening.',
+    title: 'Welcome back.',
+    subtitle: 'Pick up right where you left off.',
     switchText: "Don't have an account?",
     switchLabel: 'Register',
   },
   register: {
-    title: 'Create your account',
-    subtitle: 'Start listening in seconds.',
+    title: 'Make some noise.',
+    subtitle: 'Create an account to upload tracks and follow artists.',
     switchText: 'Already have an account?',
     switchLabel: 'Log in',
   },
@@ -43,7 +43,7 @@ export default function AuthPage() {
       <button
         type="button"
         onClick={() => switchMode(other)}
-        className="font-medium text-indigo-400 hover:text-indigo-300"
+        className="font-semibold text-lime-300 hover:text-lime-200"
       >
         {copy[mode].switchLabel}
       </button>
@@ -58,8 +58,10 @@ export default function AuthPage() {
       ) : (
         <>
           <ModeSwitch mode={mode} onChange={switchMode} />
-          <h1 className="text-2xl font-semibold tracking-tight">{copy[mode].title}</h1>
-          <p className="mt-1 mb-6 text-sm text-zinc-400">{copy[mode].subtitle}</p>
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-white">
+            {copy[mode].title}
+          </h1>
+          <p className="mt-2 mb-8 text-slate-400">{copy[mode].subtitle}</p>
           {mode === 'login' ? <LoginForm /> : <RegisterForm />}
         </>
       )}

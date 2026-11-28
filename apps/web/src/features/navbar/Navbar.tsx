@@ -1,14 +1,26 @@
 import { Archive, Bell, CircleArrowDown, House, Search, Users } from 'lucide-react';
 import { FaSpotify } from 'react-icons/fa';
-import { Link } from 'react-router';
+import type { ChangeEvent } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { useAppDispatch, useAppSelector } from '../../store';
+import { termChanged } from '../../store/search/searchSlice';
 import { GUTTER } from '../../utils/helpers';
 import ProfileMenu from './ProfileMenu';
 
 const ICON_BUTTON =
   'grid size-8 place-items-center text-zinc-400 transition-colors hover:text-white';
 
-// Persists across routes via Layout; only the profile menu is interactive for now
+// Persists across routes via Layout. Typing in search shows the results on the home page
 export default function Navbar() {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const term = useAppSelector((s) => s.search.term);
+  const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
+    dispatch(termChanged(e.target.value));
+    if (pathname !== '/') void navigate('/');
+  };
+
   return (
     <header
       className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between gap-4 bg-black ${GUTTER}`}
@@ -28,7 +40,10 @@ export default function Navbar() {
           <Search className="size-6 shrink-0 text-zinc-400 group-hover:text-white" />
           <input
             type="search"
+            aria-label="Search songs"
             placeholder="What do you want to play?"
+            value={term}
+            onChange={handleSearch}
             className="min-w-0 flex-1 bg-transparent text-base text-white placeholder:text-zinc-400 focus:outline-none"
           />
           <span className="hidden h-6 border-l border-zinc-600 sm:block" />

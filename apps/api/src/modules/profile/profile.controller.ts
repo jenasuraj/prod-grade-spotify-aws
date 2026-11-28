@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -14,6 +16,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { AuthGuard, type AuthUser } from '../auth/auth.guard.js';
+import { SongsService } from '../songs/songs.service.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { AVATAR_TYPES, ProfileService } from './profile.service.js';
 
@@ -21,12 +24,35 @@ type AuthRequest = Request & { user: AuthUser };
 
 @Controller('profile')
 export class ProfileController {
-  constructor(private readonly profiles: ProfileService) {}
+  constructor(
+    private readonly profiles: ProfileService,
+    private readonly songs: SongsService,
+  ) {}
 
   // Public, anyone can view: /api/profile/suraj
   @Get(':name')
   get(@Param('name') name: string) {
     return this.profiles.getByName(name);
+  }
+
+  // Public: counts plus both lists, each person links to /<name>
+  @Get(':name/follows')
+  follows(@Param('name') name: string) {
+    return this.profiles.getFollows(name);
+  }
+
+  // Public: the songs they made and the songs they liked
+  @Get(':name/songs')
+  songsOf(@Param('name') name: string) {
+    return this.songs.findByUser(name);
+  }
+
+  // Toggles: follows the user, or unfollows if you already do
+  @Post(':name/follow')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  follow(@Req() req: AuthRequest, @Param('name') name: string) {
+    return this.profiles.toggleFollow(req.user.id, name);
   }
 
   // Your own profile only; the user comes from the cookie, never from the body

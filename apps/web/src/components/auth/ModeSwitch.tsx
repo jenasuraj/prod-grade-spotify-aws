@@ -13,7 +13,7 @@ interface ModeSwitchProps {
 export default function ModeSwitch({ mode, onChange }: ModeSwitchProps) {
   return (
     <div
-      className="mb-6 grid grid-cols-2 rounded-lg bg-zinc-950/60 p-1 text-sm"
+      className="mb-10 flex gap-7 border-b border-white/[0.06]"
       role="group"
       aria-label="Choose login or register"
     >
@@ -23,9 +23,12 @@ export default function ModeSwitch({ mode, onChange }: ModeSwitchProps) {
           type="button"
           aria-pressed={mode === tab}
           onClick={() => onChange(tab)}
-          className={`rounded-md py-2 font-medium transition ${mode === tab ? 'bg-white/10 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}`}
+          className={`relative pb-3 text-sm font-medium transition-colors ${mode === tab ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
         >
           {labels[tab]}
+          <span
+            className={`absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-lime-300 transition-opacity ${mode === tab ? 'opacity-100' : 'opacity-0'}`}
+          />
         </button>
       ))}
     </div>

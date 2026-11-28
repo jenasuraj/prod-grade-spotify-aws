@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { ArrowRight } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import FormMessage from '../../components/ui/FormMessage';
 import Input from '../../components/ui/Input';
@@ -24,7 +25,7 @@ export default function RegisterForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <Input
         label="Name"
         name="name"
@@ -60,8 +61,11 @@ export default function RegisterForm() {
         onChange={handleChange}
       />
       <FormMessage message={error} />
-      <Button type="submit" disabled={loading} className="w-full">
+      <Button type="submit" variant="accent" disabled={loading} className="group w-full">
         {loading ? 'Creating account…' : 'Create account'}
+        {!loading && (
+          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+        )}
       </Button>
     </form>
   );

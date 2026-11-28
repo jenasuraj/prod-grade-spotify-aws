@@ -18,7 +18,10 @@ export default function ProfileForm({ profile, saving, onSave }: ProfileFormProp
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 rounded-xl border border-white/10 p-6">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-5 rounded-3xl border border-white/[0.07] bg-ink-900/80 p-6 backdrop-blur"
+    >
       <Input
         label="Display name"
         name="displayName"
