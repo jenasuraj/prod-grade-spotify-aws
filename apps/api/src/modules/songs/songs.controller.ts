@@ -1,20 +1,11 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Req, UseGuards, } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthGuard, type AuthUser } from '../auth/auth.guard.js';
 import { UploadSongFileDto } from './dto/upload-song-file.dto.js';
 import { SongsService } from './songs.service.js';
-
 type AuthRequest = Request & { user: AuthUser };
+
+
 
 @Controller('songs')
 @UseGuards(AuthGuard)

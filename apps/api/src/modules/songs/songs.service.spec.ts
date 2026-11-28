@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
+import { RedisService } from '../../infra/redis/redis.service.js';
 import { S3Service } from '../../infra/s3/s3.service.js';
 import { SongsService } from './songs.service.js';
 
@@ -23,6 +24,11 @@ describe('SongsService', () => {
     signedUrl: jest.fn<S3Service['signedUrl']>(),
     deleteMany: jest.fn<S3Service['deleteMany']>(),
   };
+  const redis = {
+    get: jest.fn<(key: string) => Promise<string | null>>(),
+    set: jest.fn<(...args: unknown[]) => Promise<unknown>>(),
+    del: jest.fn<(key: string) => Promise<number>>(),
+  };
 
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -30,12 +36,16 @@ describe('SongsService', () => {
       providers: [
         SongsService,
         { provide: PrismaService, useValue: { song: songs } },
+        { provide: RedisService, useValue: redis },
         { provide: S3Service, useValue: s3 },
       ],
     }).compile();
     service = module.get(SongsService);
     s3.signUpload.mockImplementation((key) => Promise.resolve(`https://s3/${key}?signed`));
     s3.signedUrl.mockImplementation((key) => Promise.resolve(`https://s3/${key}?read`));
+    redis.get.mockResolvedValue(null);
+    redis.set.mockResolvedValue('OK');
+    redis.del.mockResolvedValue(1);
   });
 
   it('music without a songId creates the song with its key, then returns the upload url', async () => {
@@ -117,6 +127,21 @@ describe('SongsService', () => {
         videoUrl: null,
       },
     ]);
+    expect(redis.set).toHaveBeenCalledWith('songs:mine:7', expect.any(String), 'EX', 600);
+  });
+
+  it('serves your songs from the cache without touching the db', async () => {
+    redis.get.mockResolvedValue(JSON.stringify([{ id: ID, title: 'Cached' }]));
+    expect(await service.findMine(7)).toEqual([{ id: ID, title: 'Cached' }]);
+    expect(songs.findMany).not.toHaveBeenCalled();
+  });
+
+  it('creating, adding a file to or removing a song clears your cached list', async () => {
+    await service.upload(7, { title: 'x', contentType: 'audio/mpeg', size: MB });
+    songs.findFirst.mockResolvedValue({ id: ID });
+    await service.upload(7, { songId: ID, contentType: 'image/png', size: MB });
+    expect(redis.del).toHaveBeenCalledTimes(2);
+    expect(redis.del).toHaveBeenCalledWith('songs:mine:7');
   });
 
   it('remove deletes the row first, then every stored file in one S3 call', async () => {
