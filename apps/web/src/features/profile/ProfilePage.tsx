@@ -9,6 +9,7 @@ import FormMessage from '../../components/ui/FormMessage';
 import SectionHeading from '../../components/ui/SectionHeading';
 import SectionTabs from '../../components/ui/SectionTabs';
 import { useAppDispatch, useAppSelector } from '../../store';
+import { songPlayed } from '../../store/player/playerSlice';
 import {
   fetchFollows,
   fetchProfile,
@@ -25,6 +26,7 @@ export default function ProfilePage() {
   const { name = '' } = useParams();
   const dispatch = useAppDispatch();
   const me = useAppSelector((s) => s.auth.user);
+  const playingId = useAppSelector((s) => s.player.current?.id);
   const { data, follows, songs, loading, saving, error, notice } = useAppSelector((s) => s.profile);
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState(TABS[0]);
@@ -114,6 +116,8 @@ export default function ProfilePage() {
             <SectionHeading title="Tracks" subtitle="Everything released, newest first." />
             <SongList
               songs={tracks}
+              playingId={playingId}
+              onPlay={(song) => dispatch(songPlayed({ ...song, artist: name }))}
               loading={songsLoading}
               emptyText={
                 isOwner ? 'No tracks yet. Your first upload will land here.' : 'No tracks yet.'
@@ -126,6 +130,8 @@ export default function ProfilePage() {
             <SectionHeading title="Liked" subtitle="Songs from other artists, latest like first." />
             <SongList
               songs={liked}
+              playingId={playingId}
+              onPlay={(song) => dispatch(songPlayed(song))}
               loading={songsLoading}
               emptyText="No liked songs yet."
               renderCredit={(song) => (

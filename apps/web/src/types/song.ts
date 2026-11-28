@@ -51,3 +51,6 @@ export interface SearchSong extends Song {
   liked: boolean;
   following: boolean;
 }
+
+// The song in the player bar; artist is known everywhere except your own library
+export type NowPlaying = Song & { artist?: string };

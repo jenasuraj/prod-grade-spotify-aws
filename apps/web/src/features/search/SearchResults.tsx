@@ -3,6 +3,7 @@ import SongCredit from '../../components/songs/SongCredit';
 import SongList from '../../components/songs/SongList';
 import FormMessage from '../../components/ui/FormMessage';
 import { useAppDispatch, useAppSelector } from '../../store';
+import { songPlayed } from '../../store/player/playerSlice';
 import { followArtist, likeSong, searchSongs } from '../../store/search/searchThunks';
 import { APP_NAME, GUTTER } from '../../utils/helpers';
 
@@ -16,6 +17,7 @@ interface SearchResultsProps {
 export default function SearchResults({ q }: SearchResultsProps) {
   const dispatch = useAppDispatch();
   const { results, loading, error } = useAppSelector((s) => s.search);
+  const playingId = useAppSelector((s) => s.player.current?.id);
   useEffect(() => {
     const timer = setTimeout(() => void dispatch(searchSongs(q)), TYPING_DELAY);
     return () => clearTimeout(timer);
@@ -32,6 +34,8 @@ export default function SearchResults({ q }: SearchResultsProps) {
       <FormMessage message={error} />
       <SongList
         songs={results}
+        playingId={playingId}
+        onPlay={(song) => dispatch(songPlayed(song))}
         loading={loading}
         emptyText={`No songs match "${q}".`}
         renderCredit={(song) =>

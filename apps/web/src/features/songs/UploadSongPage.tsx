@@ -9,6 +9,7 @@ import SongList from '../../components/songs/SongList';
 import FormMessage from '../../components/ui/FormMessage';
 import SectionTabs from '../../components/ui/SectionTabs';
 import { useAppDispatch, useAppSelector } from '../../store';
+import { songPlayed } from '../../store/player/playerSlice';
 import { songReset } from '../../store/songs/songsSlice';
 import { deleteSong, fetchSongs, uploadSongFile } from '../../store/songs/songsThunks';
 import type { FileUpload, SongFileKind } from '../../types/song';
@@ -69,6 +70,8 @@ export default function UploadSongPage() {
   const { songId, uploads, error, list, listLoading, listError, deleting } = useAppSelector(
     (s) => s.songs,
   );
+  const me = useAppSelector((s) => s.auth.user);
+  const playingId = useAppSelector((s) => s.player.current?.id);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [genres, setGenres] = useState<string[]>([]);
@@ -315,6 +318,8 @@ export default function UploadSongPage() {
         <FormMessage message={listError} />
         <SongList
           songs={shown}
+          playingId={playingId}
+          onPlay={(song) => dispatch(songPlayed({ ...song, artist: me?.name }))}
           loading={listLoading}
           deleting={deleting}
           onDelete={(id) => void dispatch(deleteSong(id))}
