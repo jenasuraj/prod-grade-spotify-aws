@@ -8,7 +8,7 @@ interface SectionTabsProps {
   children?: ReactNode; // small text on the right
 }
 
-// Sticky tab bar under the navbar that jumps between sections of a long page
+// Sticky tab bar under the navbar; the page decides what selecting a tab does
 export default function SectionTabs({ ids, active, onSelect, children }: SectionTabsProps) {
   return (
     <div className="sticky top-16 z-30 border-b border-white/[0.06] bg-ink-950/85 backdrop-blur-md">
