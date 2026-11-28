@@ -5,7 +5,7 @@ import { RedisService } from '../../infra/redis/redis.service.js';
 import { AUTH_COOKIE } from './auth.controller.js';
 import { userIdFromSub } from './auth.service.js';
 
-const LIMIT = 5;
+const LIMIT = 200;
 const WINDOW_MS = 60_000;
 
 // One counter per user: the key expires when the minute is up, so the count starts again

@@ -1,13 +1,14 @@
-import { AudioLines, Clapperboard, LoaderCircle, Trash2, X } from 'lucide-react';
+import { AudioLines, Clapperboard, LoaderCircle, Play, Trash2, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { Song } from '../../types/song';
 import { artworkFor } from '../../utils/helpers';
-import AudioPlayer from './AudioPlayer';
 
 interface SongListProps<T extends Song> {
   songs: T[];
   loading: boolean;
   emptyText: string;
+  playingId?: string; // the song in the player bar
+  onPlay: (song: T) => void;
   deleting?: string[]; // ids with a delete in flight
   onDelete?: (id: string) => void; // no delete button without it
   renderCredit?: (song: T) => ReactNode; // shown under the title, e.g. artist and like
@@ -39,6 +40,8 @@ export default function SongList<T extends Song>({
   songs,
   loading,
   emptyText,
+  playingId,
+  onPlay,
   deleting = [],
   onDelete,
   renderCredit,
@@ -61,11 +64,24 @@ export default function SongList<T extends Song>({
   return (
     <ol className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
       {songs.map((song) => {
-        const { id, title, description, genres, createdAt, musicUrl, imageUrl, videoUrl } = song;
+        const { id, title, description, genres, createdAt, imageUrl, videoUrl } = song;
+        const playing = playingId === id;
         return (
           <li key={id} className="group/card min-w-0">
             <div className="relative aspect-square overflow-hidden rounded-2xl bg-ink-900 ring-1 ring-white/[0.06] transition duration-300 group-hover/card:ring-white/15 motion-reduce:transition-none">
               <Cover id={id} imageUrl={imageUrl} videoUrl={openVideo === id ? videoUrl : null} />
+              <button
+                type="button"
+                onClick={() => onPlay(song)}
+                aria-label={playing ? `${title} is playing` : `Play ${title}`}
+                className={`absolute right-3 bottom-3 grid size-12 place-items-center rounded-full bg-lime-300 text-ink-950 shadow-xl shadow-black/40 transition hover:scale-105 hover:bg-lime-200 focus-visible:opacity-100 motion-reduce:transition-none ${playing ? '' : 'sm:translate-y-2 sm:opacity-0 sm:group-hover/card:translate-y-0 sm:group-hover/card:opacity-100'}`}
+              >
+                {playing ? (
+                  <AudioLines className="size-5" />
+                ) : (
+                  <Play className="size-5 translate-x-px fill-current" />
+                )}
+              </button>
               {onDelete && (
                 <button
                   type="button"
@@ -137,7 +153,11 @@ export default function SongList<T extends Song>({
               )}
             </div>
             <div className="mt-4 px-0.5">
-              <p className="truncate font-display text-lg font-semibold text-white">{title}</p>
+              <p
+                className={`truncate font-display text-lg font-semibold ${playing ? 'text-lime-300' : 'text-white'}`}
+              >
+                {title}
+              </p>
               {renderCredit?.(song)}
               <p className="truncate text-sm text-slate-500">
                 {description ? `${description} · ` : ''}
@@ -155,9 +175,6 @@ export default function SongList<T extends Song>({
                   ))}
                 </ul>
               )}
-            </div>
-            <div className="mt-3 px-0.5">
-              <AudioPlayer src={musicUrl} title={title} compact />
             </div>
           </li>
         );

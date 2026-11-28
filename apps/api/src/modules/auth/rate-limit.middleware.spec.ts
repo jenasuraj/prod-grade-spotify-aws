@@ -41,8 +41,8 @@ describe('RateLimitMiddleware', () => {
     expect(next).toHaveBeenCalled();
   });
 
-  it('allows 5 hits in the window and rejects the 6th with a 429', async () => {
-    redis.incr.mockResolvedValueOnce(5).mockResolvedValueOnce(6);
+  it('allows 200 hits in the window and rejects the 201st with a 429', async () => {
+    redis.incr.mockResolvedValueOnce(200).mockResolvedValueOnce(201);
     await middleware.use(loggedIn, res, next);
     await expect(middleware.use(loggedIn, res, next)).rejects.toThrow(HttpException);
     expect(next).toHaveBeenCalledTimes(1);

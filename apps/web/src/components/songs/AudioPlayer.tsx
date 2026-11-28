@@ -13,9 +13,10 @@ interface AudioPlayerProps {
   src: string;
   title: string;
   compact?: boolean; // no volume controls, for narrow cards
+  autoPlay?: boolean;
 }
 
-export default function AudioPlayer({ src, title, compact }: AudioPlayerProps) {
+export default function AudioPlayer({ src, title, compact, autoPlay }: AudioPlayerProps) {
   const audio = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -58,6 +59,7 @@ export default function AudioPlayer({ src, title, compact }: AudioPlayerProps) {
       <audio
         ref={audio}
         src={src}
+        autoPlay={autoPlay}
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}

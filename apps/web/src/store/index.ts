@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
 import authReducer from './auth/authSlice';
 import healthReducer from './health/healthSlice';
+import playerReducer from './player/playerSlice';
 import profileReducer from './profile/profileSlice';
 import searchReducer from './search/searchSlice';
 import songsReducer from './songs/songsSlice';
@@ -11,6 +12,7 @@ export const makeStore = () =>
     reducer: {
       auth: authReducer,
       health: healthReducer,
+      player: playerReducer,
       profile: profileReducer,
       search: searchReducer,
       songs: songsReducer,
