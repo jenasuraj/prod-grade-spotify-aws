@@ -16,11 +16,9 @@ import {
   updateProfile,
   uploadAvatar,
 } from '../../store/profile/profileThunks';
-import { APP_NAME, artworkFor, GUTTER, scrollToSection } from '../../utils/helpers';
-import { useActiveSection } from '../songs/useActiveSection';
-const SECTIONS = ['tracks', 'liked', 'people'];
+import { APP_NAME, artworkFor, GUTTER } from '../../utils/helpers';
 
-
+const TABS = ['tracks', 'liked', 'people'];
 
 // /:name — anyone can view it; the owner can also edit it and change the picture
 export default function ProfilePage() {
@@ -29,7 +27,7 @@ export default function ProfilePage() {
   const me = useAppSelector((s) => s.auth.user);
   const { data, follows, songs, loading, saving, error, notice } = useAppSelector((s) => s.profile);
   const [editing, setEditing] = useState(false);
-  const active = useActiveSection(SECTIONS);
+  const [tab, setTab] = useState(TABS[0]);
   const isOwner = me?.name === name;
   const tracks = songs?.songs ?? [];
   const liked = songs?.liked ?? [];
@@ -108,45 +106,45 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <SectionTabs ids={SECTIONS} active={active} onSelect={scrollToSection} />
+      <SectionTabs ids={TABS} active={tab} onSelect={setTab} />
 
-      <section id="tracks" className={`scroll-mt-28 py-12 lg:py-16 ${GUTTER}`}>
-        <SectionHeading title="Tracks" subtitle="Everything released, newest first." />
-        <SongList
-          songs={tracks}
-          loading={songsLoading}
-          emptyText={
-            isOwner ? 'No tracks yet. Your first upload will land here.' : 'No tracks yet.'
-          }
-        />
-      </section>
-
-      <section
-        id="liked"
-        className={`scroll-mt-28 border-t border-white/[0.06] py-12 lg:py-16 ${GUTTER}`}
-      >
-        <SectionHeading title="Liked" subtitle="Songs from other artists, latest like first." />
-        <SongList
-          songs={liked}
-          loading={songsLoading}
-          emptyText="No liked songs yet."
-          renderCredit={(song) => (
-            <Link
-              to={`/${song.artist}`}
-              className="mt-0.5 block truncate text-sm text-slate-400 hover:text-white hover:underline"
-            >
-              {song.artist}
-            </Link>
-          )}
-        />
-      </section>
-
-      <section
-        id="people"
-        className={`scroll-mt-28 border-t border-white/[0.06] py-12 lg:py-16 ${GUTTER}`}
-      >
-        <SectionHeading title="People" subtitle="Who they follow and who follows them." />
-        {follows && <FollowStats follows={follows} />}
+      <section className={`py-12 lg:py-16 ${GUTTER}`}>
+        {tab === 'tracks' && (
+          <>
+            <SectionHeading title="Tracks" subtitle="Everything released, newest first." />
+            <SongList
+              songs={tracks}
+              loading={songsLoading}
+              emptyText={
+                isOwner ? 'No tracks yet. Your first upload will land here.' : 'No tracks yet.'
+              }
+            />
+          </>
+        )}
+        {tab === 'liked' && (
+          <>
+            <SectionHeading title="Liked" subtitle="Songs from other artists, latest like first." />
+            <SongList
+              songs={liked}
+              loading={songsLoading}
+              emptyText="No liked songs yet."
+              renderCredit={(song) => (
+                <Link
+                  to={`/${song.artist}`}
+                  className="mt-0.5 block truncate text-sm text-slate-400 hover:text-white hover:underline"
+                >
+                  {song.artist}
+                </Link>
+              )}
+            />
+          </>
+        )}
+        {tab === 'people' && (
+          <>
+            <SectionHeading title="People" subtitle="Who they follow and who follows them." />
+            {follows && <FollowStats follows={follows} />}
+          </>
+        )}
       </section>
     </div>
   );
